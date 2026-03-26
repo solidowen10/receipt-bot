@@ -26,8 +26,12 @@ app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, rawBod
   }
 })
 
-// Serve setup UI static files
-app.register(staticPlugin, { root: path.join(__dirname, 'public'), prefix: '/setup/' })
+// Serve setup UI
+app.register(staticPlugin, { root: __dirname })
+
+app.get('/setup/', async (req, reply) => {
+  reply.type('text/html').sendFile('index.html', __dirname)
+})
 
 // ── LINE Webhook ────────────────────────────────────────────────────────────
 

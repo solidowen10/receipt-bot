@@ -5,8 +5,8 @@
   "description": "LINE Bot for automatic receipt scanning — per-user Google OAuth",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node --env-file=.env index.js",
+    "dev": "node --env-file=.env --watch index.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

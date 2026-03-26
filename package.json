@@ -5,7 +5,7 @@
   "description": "LINE Bot for automatic receipt scanning — per-user Google OAuth",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file=.env index.js",
+    "start": "node index.js",
     "dev": "node --env-file=.env --watch index.js"
   },
   "dependencies": {

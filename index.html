@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>發票記帳 — Google 設定</title>
+<style>
+  :root {
+    --green: #06C755;
+    --green-dark: #05a847;
+    --bg: #f0f2f5;
+    --card: #ffffff;
+    --border: #e0e0e0;
+    --text: #1a1a1a;
+    --muted: #888;
+    --radius: 12px;
+    --danger: #e05252;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* Header */
+  .header {
+    background: var(--green);
+    padding: 20px 20px 16px;
+    color: #fff;
+    text-align: center;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .header p  { font-size: 13px; opacity: 0.85; }
+
+  /* Step indicator */
+  .steps {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    padding: 20px 24px 0;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+  .step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 13px; left: 50%;
+    width: 100%; height: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .step.done:not(:last-child)::after { background: var(--green); }
+  .step-dot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 1;
+    transition: all 0.2s;
+  }
+  .step.active .step-dot { background: var(--green); color: #fff; }
+  .step.done   .step-dot { background: var(--green); color: #fff; }
+  .step-label { font-size: 11px; color: var(--muted); margin-top: 5px; text-align: center; }
+  .step.active .step-label { color: var(--green); font-weight: 500; }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 16px 16px 0;
+    max-width: 480px;
+    margin-left: auto; margin-right: auto;
+  }
+  .card-title {
+    font-size: 15px; font-weight: 700;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
+  /* Section panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Folder browser */
+  .breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--muted);
+    margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .breadcrumb span { cursor: pointer; color: var(--green); }
+  .breadcrumb span:hover { text-decoration: underline; }
+  .breadcrumb .sep { color: var(--border); }
+
+  .folder-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .folder-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 14px;
+  }
+  .folder-item:last-child { border-bottom: none; }
+  .folder-item:hover { background: #f8f8f8; }
+  .folder-item.selected { background: #e8f9ef; }
+  .folder-item .icon { font-size: 18px; flex-shrink: 0; }
+  .folder-item .name { flex: 1; }
+  .folder-item .nav { color: var(--muted); font-size: 18px; }
+  .folder-item.empty { color: var(--muted); cursor: default; font-style: italic; font-size: 13px; }
+
+  /* Sheet list */
+  .sheet-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 14px;
+  }
+  .sheet-item:last-child { border-bottom: none; }
+  .sheet-item:hover { background: #f8f8f8; }
+  .sheet-item.selected { background: #e8f9ef; }
+  .sheet-item .icon { font-size: 18px; flex-shrink: 0; }
+
+  /* New sheet input */
+  .new-sheet-row {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .new-sheet-row input {
+    flex: 1; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 14px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .new-sheet-row input:focus { border-color: var(--green); }
+
+  /* Buttons */
+  .btn {
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--green); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--green-dark); }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-outline {
+    background: transparent; color: var(--green);
+    border: 1.5px solid var(--green);
+  }
+  .btn-outline:hover { background: #e8f9ef; }
+  .btn-sm { padding: 8px 14px; font-size: 13px; }
+  .btn-full { width: 100%; }
+
+  /* Loading spinner */
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(6,199,85,0.3);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Summary card */
+  .summary-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-label { color: var(--muted); width: 80px; flex-shrink: 0; }
+  .summary-value { flex: 1; font-weight: 500; }
+
+  /* Selected badge */
+  .selected-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #e8f9ef; color: #05a847;
+    border: 1px solid #a8dfbc;
+    border-radius: 20px; padding: 4px 12px;
+    font-size: 12px; font-weight: 500; margin-top: 10px;
+  }
+
+  /* Alert */
+  .alert {
+    padding: 12px 14px; border-radius: 8px;
+    font-size: 13px; line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .alert-info { background: #e8f4fd; color: #1565c0; border: 1px solid #bbdefb; }
+  .alert-success { background: #e8f9ef; color: #1b5e20; border: 1px solid #a5d6a7; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 Google Drive 設定</h1>
+  <p>選擇要儲存發票的資料夾與試算表</p>
+</div>
+
+<!-- Step indicator -->
+<div class="steps">
+  <div class="step active" id="s1"><div class="step-dot">1</div><div class="step-label">Drive 資料夾</div></div>
+  <div class="step"        id="s2"><div class="step-dot">2</div><div class="step-label">試算表</div></div>
+  <div class="step"        id="s3"><div class="step-dot">3</div><div class="step-label">完成</div></div>
+</div>
+
+<!-- ── Panel 1: Drive folder ── -->
+<div class="panel active" id="p1">
+  <div class="card">
+    <div class="card-title">📁 選擇發票儲存資料夾</div>
+    <div class="card-sub">發票圖片和 PDF 將存入此資料夾</div>
+
+    <div class="breadcrumb" id="breadcrumb">
+      <span onclick="navToRoot()">我的雲端硬碟</span>
+    </div>
+
+    <div id="folderListWrap">
+      <div class="folder-list" id="folderList">
+        <div class="folder-item empty"><span>載入中 <span class="spinner"></span></span></div>
+      </div>
+    </div>
+
+    <div id="folderSelected" style="display:none">
+      <div class="selected-badge">✅ <span id="folderSelectedName"></span></div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-primary btn-full" id="p1Next" onclick="goToStep2()" disabled>
+        下一步：選擇試算表 →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Panel 2: Sheet ── -->
+<div class="panel" id="p2">
+  <div class="card">
+    <div class="card-title">📊 選擇記錄試算表</div>
+    <div class="card-sub">消費記錄將寫入此試算表</div>
+
+    <div id="sheetListWrap">
+      <div class="folder-list" id="sheetList">
+        <div class="folder-item empty"><span>載入中 <span class="spinner"></span></span></div>
+      </div>
+    </div>
+
+    <div id="sheetSelected" style="display:none">
+      <div class="selected-badge">✅ <span id="sheetSelectedName"></span></div>
+    </div>
+
+    <div class="new-sheet-row">
+      <input type="text" id="newSheetName" placeholder="或建立新試算表：輸入名稱…" />
+      <button class="btn btn-outline btn-sm" onclick="doCreateSheet()">建立</button>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="goToStep1()">← 上一步</button>
+      <button class="btn btn-primary" style="flex:1" id="p2Next" onclick="goToStep3()" disabled>
+        下一步：確認設定 →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Panel 3: Confirm ── -->
+<div class="panel" id="p3">
+  <div class="card">
+    <div class="card-title">✅ 確認設定內容</div>
+    <div class="card-sub">確認後設定將儲存並通知 LINE Bot</div>
+
+    <div class="alert alert-info" id="confirmAlert"></div>
+
+    <div style="margin-top:4px">
+      <div class="summary-row">
+        <span class="summary-label">Drive 資料夾</span>
+        <span class="summary-value" id="s_folder">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">試算表</span>
+        <span class="summary-value" id="s_sheet">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">分頁名稱</span>
+        <span class="summary-value">發票記錄</span>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="goToStep2()">← 返回</button>
+      <button class="btn btn-primary" style="flex:1" id="saveBtn" onclick="saveSettings()">
+        儲存設定
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Done ── -->
+<div class="panel" id="pDone">
+  <div class="card" style="text-align:center;padding:40px 20px">
+    <div style="font-size:56px;margin-bottom:16px">🎉</div>
+    <h2 style="font-size:20px;margin-bottom:8px">設定完成！</h2>
+    <p style="color:var(--muted);font-size:14px;line-height:1.6">
+      已通知 LINE Bot 你的設定。<br>
+      關閉此頁面，回到 LINE 傳送發票照片，就開始自動記帳囉！
+    </p>
+    <div class="alert alert-success" style="margin-top:20px;text-align:left">
+      ✅ 發票圖片和 PDF 將存至你選擇的 Drive 資料夾<br>
+      ✅ 消費記錄將自動寫入試算表（含 PDF 連結）
+    </div>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search)
+const userId = params.get('userId') || ''
+
+const state = {
+  driveFolder: null, driveFolderName: null,
+  sheetId: null, sheetName: null,
+  folderStack: [{ id: 'root', name: '我的雲端硬碟' }],
+}
+
+// ── Step navigation ──────────────────────────────────────────────────────
+
+function setStep(n) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'done'))
+  const panels = ['p1','p2','p3']
+  if (n <= panels.length) {
+    document.getElementById(panels[n-1]).classList.add('active')
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById('s'+i)
+      if (i < n) el.classList.add('done')
+      else if (i === n) el.classList.add('active')
+    }
+  } else {
+    document.getElementById('pDone').classList.add('active')
+    document.querySelectorAll('.step').forEach(s => s.classList.add('done'))
+  }
+}
+
+async function goToStep1() { setStep(1); await loadFolders('root') }
+async function goToStep2() { setStep(2); await loadSheets() }
+function goToStep3() {
+  setStep(3)
+  document.getElementById('s_folder').textContent = state.driveFolderName
+  document.getElementById('s_sheet').textContent  = state.sheetName
+  document.getElementById('confirmAlert').textContent =
+    '請確認以下設定無誤，儲存後 LINE Bot 將立即生效。'
+}
+
+// ── Folder browser ───────────────────────────────────────────────────────
+
+async function loadFolders(parentId) {
+  const list = document.getElementById('folderList')
+  list.innerHTML = '<div class="folder-item empty"><span>載入中 <span class="spinner"></span></span></div>'
+
+  const res = await fetch(`/api/drive/folders?userId=${encodeURIComponent(userId)}&parentId=${parentId}`)
+  const { folders, error } = await res.json()
+
+  if (error) { list.innerHTML = `<div class="folder-item empty">❌ ${error}</div>`; return }
+
+  if (folders.length === 0) {
+    list.innerHTML = '<div class="folder-item empty">（此資料夾沒有子資料夾）</div>'
+  } else {
+    list.innerHTML = folders.map(f => `
+      <div class="folder-item ${state.driveFolder === f.id ? 'selected' : ''}" data-id="${f.id}" data-name="${escHtml(f.name)}">
+        <span class="icon">📁</span>
+        <span class="name">${escHtml(f.name)}</span>
+        <span class="nav" onclick="event.stopPropagation();drillDown('${f.id}','${escHtml(f.name)}')">›</span>
+      </div>
+    `).join('')
+    list.querySelectorAll('.folder-item').forEach(el => {
+      el.addEventListener('click', () => selectFolder(el.dataset.id, el.dataset.name))
+    })
+  }
+}
+
+function selectFolder(id, name) {
+  state.driveFolder = id; state.driveFolderName = name
+  document.querySelectorAll('.folder-item').forEach(el =>
+    el.classList.toggle('selected', el.dataset.id === id))
+  document.getElementById('folderSelected').style.display = 'block'
+  document.getElementById('folderSelectedName').textContent = name
+  document.getElementById('p1Next').disabled = false
+}
+
+async function drillDown(folderId, folderName) {
+  state.folderStack.push({ id: folderId, name: folderName })
+  renderBreadcrumb()
+  await loadFolders(folderId)
+}
+
+async function navToRoot() {
+  state.folderStack = [{ id: 'root', name: '我的雲端硬碟' }]
+  renderBreadcrumb()
+  await loadFolders('root')
+}
+
+async function navToIndex(i) {
+  state.folderStack = state.folderStack.slice(0, i + 1)
+  renderBreadcrumb()
+  await loadFolders(state.folderStack[i].id)
+}
+
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb')
+  bc.innerHTML = state.folderStack.map((f, i) =>
+    `<span onclick="navToIndex(${i})">${escHtml(f.name)}</span>` +
+    (i < state.folderStack.length - 1 ? '<span class="sep">›</span>' : '')
+  ).join('')
+}
+
+// ── Sheet browser ────────────────────────────────────────────────────────
+
+async function loadSheets() {
+  const list = document.getElementById('sheetList')
+  list.innerHTML = '<div class="folder-item empty"><span>載入中 <span class="spinner"></span></span></div>'
+
+  const res = await fetch(`/api/sheets?userId=${encodeURIComponent(userId)}`)
+  const { sheets, error } = await res.json()
+
+  if (error) { list.innerHTML = `<div class="folder-item empty">❌ ${error}</div>`; return }
+
+  if (sheets.length === 0) {
+    list.innerHTML = '<div class="folder-item empty">（尚無試算表，請在下方建立一個）</div>'
+  } else {
+    list.innerHTML = sheets.map(s => `
+      <div class="sheet-item ${state.sheetId === s.id ? 'selected' : ''}" data-id="${s.id}" data-name="${escHtml(s.name)}">
+        <span class="icon">📊</span>
+        <span class="name">${escHtml(s.name)}</span>
+      </div>
+    `).join('')
+    list.querySelectorAll('.sheet-item').forEach(el => {
+      el.addEventListener('click', () => selectSheet(el.dataset.id, el.dataset.name))
+    })
+  }
+}
+
+function selectSheet(id, name) {
+  state.sheetId = id; state.sheetName = name
+  document.querySelectorAll('.sheet-item').forEach(el =>
+    el.classList.toggle('selected', el.dataset.id === id))
+  document.getElementById('sheetSelected').style.display = 'block'
+  document.getElementById('sheetSelectedName').textContent = name
+  document.getElementById('p2Next').disabled = false
+}
+
+async function doCreateSheet() {
+  const input = document.getElementById('newSheetName')
+  const title = input.value.trim() || '發票記帳'
+
+  const btn = document.querySelector('.new-sheet-row .btn')
+  btn.disabled = true; btn.textContent = '建立中…'
+
+  const res = await fetch('/api/sheets/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, title }),
+  })
+  const { sheet, error } = await res.json()
+  btn.disabled = false; btn.textContent = '建立'
+
+  if (error) { alert('建立失敗：' + error); return }
+
+  input.value = ''
+  await loadSheets()
+  selectSheet(sheet.id, sheet.name)
+}
+
+// ── Save ─────────────────────────────────────────────────────────────────
+
+async function saveSettings() {
+  const btn = document.getElementById('saveBtn')
+  btn.disabled = true; btn.textContent = '儲存中…'
+
+  const res = await fetch('/api/setup/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      driveFolder:     state.driveFolder,
+      driveFolderName: state.driveFolderName,
+      sheetId:         state.sheetId,
+      sheetName:       state.sheetName ?? '發票記錄',
+    }),
+  })
+  const { ok, error } = await res.json()
+  btn.disabled = false; btn.textContent = '儲存設定'
+
+  if (!ok) { alert('儲存失敗：' + error); return }
+  setStep(4)
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+}
+
+// Load folders on start
+loadFolders('root')
+</script>
+</body>
+</html>

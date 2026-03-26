@@ -21,7 +21,7 @@
  */
 
 import Database from 'better-sqlite3'
-import { randomBytes } from 'crypto'
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto'
 import path from 'path'
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data.db')
@@ -81,22 +81,63 @@ export function isSetupDone(userId) {
 // ── OAuth states (CSRF protection) ────────────────────────────────────────
 
 export function createOAuthState(userId) {
-  // Clean expired states first
-  db.prepare('DELETE FROM oauth_states WHERE expiresAt < ?').run(Date.now())
-
-  const state = randomBytes(24).toString('hex')
-  const expiresAt = Date.now() + 10 * 60 * 1000 // 10 min
-  db.prepare('INSERT INTO oauth_states (state, userId, expiresAt) VALUES (?, ?, ?)').run(state, userId, expiresAt)
-  return state
+  const expiresAt = Date.now() + 10 * 60 * 1000
+  const payload = {
+    userId,
+    expiresAt,
+    nonce: randomBytes(16).toString('hex'),
+  }
+  const encodedPayload = base64url(JSON.stringify(payload))
+  const signature = signOAuthState(encodedPayload)
+  return `${encodedPayload}.${signature}`
 }
 
 export function consumeOAuthState(state) {
-  const row = db.prepare('SELECT * FROM oauth_states WHERE state = ?').get(state)
-  if (!row) return null
-  if (row.expiresAt < Date.now()) {
-    db.prepare('DELETE FROM oauth_states WHERE state = ?').run(state)
+  if (!state || typeof state !== 'string') return null
+
+  const [encodedPayload, signature] = state.split('.')
+  if (!encodedPayload || !signature) return null
+  if (!verifyOAuthState(encodedPayload, signature)) return null
+
+  let payload
+  try {
+    payload = JSON.parse(base64urlDecode(encodedPayload))
+  } catch {
     return null
   }
-  db.prepare('DELETE FROM oauth_states WHERE state = ?').run(state)
-  return row.userId
+
+  if (!payload?.userId || !payload?.expiresAt) return null
+  if (payload.expiresAt < Date.now()) return null
+
+  return payload.userId
+}
+
+const OAUTH_STATE_SECRET =
+  process.env.OAUTH_STATE_SECRET ||
+  process.env.LINE_CHANNEL_SECRET ||
+  process.env.GOOGLE_CLIENT_SECRET ||
+  'receipt-bot-oauth-state'
+
+function signOAuthState(encodedPayload) {
+  return createHmac('sha256', OAUTH_STATE_SECRET)
+    .update(encodedPayload)
+    .digest('base64url')
+}
+
+function verifyOAuthState(encodedPayload, signature) {
+  try {
+    const expected = Buffer.from(signOAuthState(encodedPayload))
+    const actual = Buffer.from(signature)
+    return expected.length === actual.length && timingSafeEqual(expected, actual)
+  } catch {
+    return false
+  }
+}
+
+function base64url(value) {
+  return Buffer.from(value, 'utf8').toString('base64url')
+}
+
+function base64urlDecode(value) {
+  return Buffer.from(value, 'base64url').toString('utf8')
 }

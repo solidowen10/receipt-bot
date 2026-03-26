@@ -30,7 +30,7 @@ app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, rawBod
 app.register(staticPlugin, { root: __dirname })
 
 app.get('/setup/', async (req, reply) => {
-  reply.type('text/html').sendFile('index.html', __dirname)
+  return reply.type('text/html').sendFile('index.html')
 })
 
 // ── LINE Webhook ────────────────────────────────────────────────────────────

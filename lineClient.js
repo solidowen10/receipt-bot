@@ -26,6 +26,7 @@ export const blobClient = new line.messagingApi.MessagingApiBlobClient(config)
 export const middleware = line.middleware(config)
 
 export function validateSignature(body, signature) {
+  if (!signature || typeof body !== 'string') return false
   return line.validateSignature(body, config.channelSecret, signature)
 }
 

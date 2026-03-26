@@ -81,7 +81,7 @@ function sendCategoryPrompt(send, parsedData, categories) {
     }])
 }
 
-export async function replyConfirmation(replyToken, record, sheetUrl) {
+export async function replyConfirmation(replyToken, record, sheetUrl, reconfigureUrl) {
   const bodyRows = [
     row('日期', record.date ?? '-'),
     row('店家', record.store ?? '-', true),
@@ -93,6 +93,13 @@ export async function replyConfirmation(replyToken, record, sheetUrl) {
         { type: 'text', text: `NT$ ${record.total ?? '-'}`, size: 'md', color: '#06C755', flex: 2, align: 'end', weight: 'bold' },
       ],
     },
+    { type: 'separator', margin: 'md' },
+    {
+      type: 'box', layout: 'vertical', margin: 'md', spacing: 'sm', contents: [
+        { type: 'text', text: '繼續記帳：直接再上傳照片即可', size: 'sm', color: '#555555', wrap: true },
+        { type: 'text', text: '要換資料夾：請點下方「重新選擇資料夾」', size: 'sm', color: '#555555', wrap: true },
+      ],
+    },
   ]
 
   const footerBtns = []
@@ -100,6 +107,7 @@ export async function replyConfirmation(replyToken, record, sheetUrl) {
     footerBtns.push({ type: 'button', style: 'link', height: 'sm', action: { type: 'uri', label: '查看發票 PDF', uri: record.pdfUrl } })
   }
   footerBtns.push({ type: 'button', style: 'link', height: 'sm', action: { type: 'uri', label: '查看 Google Sheets', uri: sheetUrl } })
+  footerBtns.push({ type: 'button', style: 'primary', height: 'sm', color: '#6517ab', action: { type: 'uri', label: '重新選擇資料夾', uri: reconfigureUrl } })
 
   return client.replyMessage({
     replyToken,
@@ -109,7 +117,7 @@ export async function replyConfirmation(replyToken, record, sheetUrl) {
       contents: {
         type: 'bubble',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#06C755', paddingAll: 'md',
+          type: 'box', layout: 'vertical', backgroundColor: '#6517ab', paddingAll: 'md',
           contents: [{ type: 'text', text: '✅ 記帳完成', color: '#FFFFFF', size: 'lg', weight: 'bold' }],
         },
         body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: bodyRows },

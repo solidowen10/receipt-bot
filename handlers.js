@@ -13,7 +13,7 @@ function setupMsg(userId, prefix = '👋 請先完成設定後再開始使用') 
   return (
     `${prefix}\n\n` +
     `🔗 ${url}\n\n` +
-    `⚠️ 請長按連結 → 選擇「用瀏覽器開啟」\n` +
+    `⚠️ 請長按複製連結 → 至瀏覽器開啟\n` +
     `（必須用 Safari / Chrome 開啟，LINE 內建瀏覽器無法完成 Google 授權）`
   )
 }
@@ -135,17 +135,18 @@ async function saveAndNotify(userId, replyToken, data) {
   }
 
   const sheetUrl = await appendToSheet(userId, record)
+  const reconfigureUrl = `${APP_URL}/auth?userId=${encodeURIComponent(userId)}`
 
   clearSession(userId)
 
   if (replyToken) {
-    await replyConfirmation(replyToken, record, sheetUrl)
+    await replyConfirmation(replyToken, record, sheetUrl, reconfigureUrl)
   } else {
-    await pushConfirmation(userId, record, sheetUrl)
+    await pushConfirmation(userId, record, sheetUrl, reconfigureUrl)
   }
 }
 
-async function pushConfirmation(userId, record, sheetUrl) {
+async function pushConfirmation(userId, record, sheetUrl, reconfigureUrl) {
   const text = [
     '✅ 記帳完成！',
     `📅 ${record.date ?? '-'}　🏪 ${record.store ?? '-'}`,
@@ -153,6 +154,9 @@ async function pushConfirmation(userId, record, sheetUrl) {
     '',
     `📊 查看記錄：${sheetUrl}`,
     record.pdfUrl ? `📄 發票 PDF：${record.pdfUrl}` : '',
+    '',
+    '繼續記帳：直接再上傳照片即可',
+    `要換資料夾：請點我重新選擇資料夾\n${reconfigureUrl}`,
   ].filter(Boolean).join('\n')
 
   await pushText(userId, text)

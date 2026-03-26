@@ -100,7 +100,7 @@ export async function listSheets(userId) {
     q: `mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`,
     fields: 'files(id,name)',
     orderBy: 'modifiedTime desc',
-    pageSize: 30,
+    pageSize: 10,
   })
   return res.data.files ?? []
 }
@@ -114,6 +114,7 @@ export async function createSheet(userId, title = '發票記帳', parentFolder =
   const res = await sheets.spreadsheets.create({
     requestBody: {
       properties: { title },
+      sheets: [{ properties: { title: '發票記錄' } }],
     },
   })
 

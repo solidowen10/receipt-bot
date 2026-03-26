@@ -148,7 +148,7 @@ app.post('/api/sheets/create', async (req, reply) => {
 
 /** Save final config — called when user clicks "完成設定" */
 app.post('/api/setup/save', async (req, reply) => {
-  const { userId, driveFolder, driveFolderName, sheetId, sheetName } = req.body ?? {}
+  const { userId, driveFolder, driveFolderName, sheetId, sheetName, sheetTitle } = req.body ?? {}
   if (!userId || !driveFolder || !sheetId) {
     return reply.status(400).send({ error: 'Missing required fields' })
   }
@@ -164,7 +164,7 @@ app.post('/api/setup/save', async (req, reply) => {
   await pushText(userId,
     '✅ 設定完成！\n\n' +
     `📁 Drive 資料夾：${driveFolderName ?? driveFolder}\n` +
-    `📊 試算表：${sheetName ?? '發票記錄'}\n\n` +
+    `📊 試算表：${sheetTitle || '發票記帳'}\n\n` +
     '現在開始傳發票圖片給我，就會自動幫你記帳囉！'
   )
 

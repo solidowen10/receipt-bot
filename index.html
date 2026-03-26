@@ -283,6 +283,11 @@
     <div class="card-title">📊 選擇記錄試算表</div>
     <div class="card-sub">消費記錄將寫入此試算表</div>
 
+    <div class="new-sheet-row">
+      <input type="text" id="newSheetName" placeholder="或建立新試算表：輸入名稱…" />
+      <button class="btn btn-outline btn-sm" onclick="doCreateSheet()">建立</button>
+    </div>
+
     <div id="sheetListWrap">
       <div class="folder-list" id="sheetList">
         <div class="folder-item empty"><span>載入中 <span class="spinner"></span></span></div>
@@ -291,11 +296,6 @@
 
     <div id="sheetSelected" style="display:none">
       <div class="selected-badge">✅ <span id="sheetSelectedName"></span></div>
-    </div>
-
-    <div class="new-sheet-row">
-      <input type="text" id="newSheetName" placeholder="或建立新試算表：輸入名稱…" />
-      <button class="btn btn-outline btn-sm" onclick="doCreateSheet()">建立</button>
     </div>
 
     <div style="margin-top:16px;display:flex;gap:8px">
@@ -357,7 +357,7 @@ const userId = params.get('userId') || ''
 
 const state = {
   driveFolder: null, driveFolderName: null,
-  sheetId: null, sheetName: null,
+  sheetId: null, sheetName: null, sheetTabName: '',
   folderStack: [{ id: 'root', name: '我的雲端硬碟' }],
 }
 
@@ -484,8 +484,8 @@ async function loadSheets() {
   }
 }
 
-function selectSheet(id, name) {
-  state.sheetId = id; state.sheetName = name
+function selectSheet(id, name, tabName = '') {
+  state.sheetId = id; state.sheetName = name; state.sheetTabName = tabName
   document.querySelectorAll('.sheet-item').forEach(el =>
     el.classList.toggle('selected', el.dataset.id === id))
   document.getElementById('sheetSelected').style.display = 'block'
@@ -512,7 +512,7 @@ async function doCreateSheet() {
 
   input.value = ''
   await loadSheets()
-  selectSheet(sheet.id, sheet.name)
+  selectSheet(sheet.id, sheet.name, sheet.tabName || '')
 }
 
 // ── Save ─────────────────────────────────────────────────────────────────
@@ -529,7 +529,8 @@ async function saveSettings() {
       driveFolder:     state.driveFolder,
       driveFolderName: state.driveFolderName,
       sheetId:         state.sheetId,
-      sheetName:       '',
+      sheetName:       state.sheetTabName ?? '',
+      sheetTitle:      state.sheetName ?? '',
     }),
   })
   const { ok, error } = await res.json()

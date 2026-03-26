@@ -124,8 +124,15 @@ async function saveAndNotify(userId, replyToken, data) {
   const safeDate  = date ?? new Date().toISOString().split('T')[0]
   const filename  = `${safeDate}_${safeStore}.jpg`
 
-  const { imageUrl, pdfUrl } = await uploadToDrive(userId, imageBuffer, mimeType, filename)
-  const record = { ...rest, date, store, imageUrl, pdfUrl }
+  const { imageUrl, pdfUrl, ocrFields } = await uploadToDrive(userId, imageBuffer, mimeType, filename)
+  const record = {
+    ...rest,
+    date: ocrFields?.date ?? date,
+    store: ocrFields?.store ?? store,
+    total: ocrFields?.total ?? rest.total,
+    imageUrl,
+    pdfUrl,
+  }
 
   const sheetUrl = await appendToSheet(userId, record)
 

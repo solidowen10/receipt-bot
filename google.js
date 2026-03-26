@@ -132,14 +132,9 @@ export async function uploadToDrive(userId, imageBuffer, mimeType, filename) {
   const imgRes = await drive.files.create({
     requestBody: { name: filename, mimeType, parents: [user.driveFolder] },
     media: { mimeType, body: bufferToStream(imageBuffer) },
-    fields: 'id,webViewLink',
+    fields: 'id',
   })
   const imgFileId = imgRes.data.id
-
-  await drive.permissions.create({
-    fileId: imgFileId,
-    requestBody: { role: 'reader', type: 'anyone' },
-  })
 
   // 2. Create a Google Doc copy → export as PDF → upload PDF
   const docCopy = await drive.files.copy({
@@ -152,12 +147,18 @@ export async function uploadToDrive(userId, imageBuffer, mimeType, filename) {
     fields: 'id',
   })
 
+  const ocrText = await drive.files.export(
+    { fileId: docCopy.data.id, mimeType: 'text/plain' },
+    { responseType: 'text' }
+  ).then((r) => String(r.data ?? ''))
+
   const pdfBuffer = await drive.files.export(
     { fileId: docCopy.data.id, mimeType: 'application/pdf' },
     { responseType: 'arraybuffer' }
   ).then((r) => Buffer.from(r.data))
 
   await drive.files.delete({ fileId: docCopy.data.id }).catch(() => {})
+  await drive.files.delete({ fileId: imgFileId }).catch(() => {})
 
   const pdfName = filename.replace(/\.[^.]+$/, '.pdf')
   const pdfRes = await drive.files.create({
@@ -171,7 +172,12 @@ export async function uploadToDrive(userId, imageBuffer, mimeType, filename) {
     requestBody: { role: 'reader', type: 'anyone' },
   })
 
-  return { imageUrl: imgRes.data.webViewLink, pdfUrl: pdfRes.data.webViewLink }
+  return {
+    imageUrl: null,
+    pdfUrl: pdfRes.data.webViewLink,
+    ocrText,
+    ocrFields: extractReceiptFieldsFromText(ocrText),
+  }
 }
 
 // ── Sheets append ──────────────────────────────────────────────────────────
@@ -231,4 +237,58 @@ export async function appendToSheet(userId, record) {
 import { Readable } from 'stream'
 function bufferToStream(buf) {
   const r = new Readable(); r.push(buf); r.push(null); return r
+}
+
+function extractReceiptFieldsFromText(text) {
+  if (!text) return {}
+
+  const normalized = text.replace(/\r/g, '').replace(/\u3000/g, ' ').trim()
+  const lines = normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const date = extractDate(normalized)
+  const total = extractTotal(lines, normalized)
+  const store = extractStore(lines)
+
+  return {
+    date: date ?? null,
+    total: total ?? null,
+    store: store ?? null,
+  }
+}
+
+function extractDate(text) {
+  const match = text.match(/(20\d{2})[\/.-](\d{1,2})[\/.-](\d{1,2})/)
+  if (!match) return null
+
+  const [, year, month, day] = match
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
+function extractTotal(lines, text) {
+  const lineMatch = lines.find((line) => /總\s*計|合\s*計|應\s*付/.test(line))
+  const source = lineMatch ?? text
+  const amountMatch = source.match(/(?:總\s*計|合\s*計|應\s*付)[^\d]{0,10}(\d[\d,]*)/)
+  if (!amountMatch) return null
+  return Number(amountMatch[1].replace(/,/g, '')) || null
+}
+
+function extractStore(lines) {
+  const noisePattern = /^(?:統一編號|發票|電話|地址|總計|合計|應付|日期|時間|TX|隨機碼|交易|明細|品名|數量|單價|金額)/i
+  const preferred = lines.find((line) =>
+    !noisePattern.test(line) &&
+    /(?:公司|有限公司|股份有限公司|企業社|商行|餐廳|商店|門市|超商|藥局|診所|咖啡|早餐|便當|小吃)/.test(line)
+  )
+  if (preferred) return preferred
+
+  const fallback = lines.find((line) =>
+    !noisePattern.test(line) &&
+    !/\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}/.test(line) &&
+    !/^\d[\d\s,.:/-]*$/.test(line) &&
+    line.length >= 2 &&
+    line.length <= 40
+  )
+  return fallback ?? null
 }

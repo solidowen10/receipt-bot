@@ -3,27 +3,37 @@ import staticPlugin from '@fastify/static'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-import { validateSignature } from './lineClient.js'
+import { validateSignature, pushText } from './lineClient.js'
 import { handleMessage } from './handlers.js'
 import { buildAuthUrl, exchangeCodeForTokens, listDriveFolders, listSheets, createSheet } from './google.js'
-import { createOAuthState, consumeOAuthState, upsertUser, getUser, isSetupDone } from './db.js'
-import { lineClient, pushText } from './lineClient.js'
+import { createOAuthState, consumeOAuthState, upsertUser, getUser } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const app = Fastify({ logger: true })
+
+// Parse body as raw string so we can validate LINE's HMAC signature,
+// then also expose the parsed JSON on req.body for route handlers.
+const app = Fastify({
+  logger: true,
+  bodyLimit: 10 * 1024 * 1024,
+})
+
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, rawBody, done) => {
+  try {
+    req.rawBody = rawBody
+    done(null, JSON.parse(rawBody))
+  } catch (e) {
+    done(e)
+  }
+})
 
 // Serve setup UI static files
 app.register(staticPlugin, { root: path.join(__dirname, 'public'), prefix: '/setup/' })
 
 // ── LINE Webhook ────────────────────────────────────────────────────────────
 
-app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
-  try { done(null, JSON.parse(body)) } catch (e) { done(e) }
-})
-
-app.post('/webhook', { config: { rawBody: true } }, async (req, reply) => {
+app.post('/webhook', async (req, reply) => {
   const signature = req.headers['x-line-signature']
-  const rawBody = req.body ? JSON.stringify(req.body) : ''
+  const rawBody = req.rawBody ?? ''
 
   if (!validateSignature(rawBody, signature)) {
     return reply.status(403).send({ error: 'Invalid signature' })

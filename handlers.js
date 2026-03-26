@@ -143,7 +143,6 @@ async function saveAndNotify(userId, replyToken, data) {
 }
 
 async function pushConfirmation(userId, record, sheetUrl) {
-  const { client } = await import('./lineClient.js')
   const text = [
     '✅ 記帳完成！',
     `📅 ${record.date ?? '-'}　🏪 ${record.store ?? '-'}`,
@@ -153,5 +152,5 @@ async function pushConfirmation(userId, record, sheetUrl) {
     record.pdfUrl ? `📄 發票 PDF：${record.pdfUrl}` : '',
   ].filter(Boolean).join('\n')
 
-  await client.pushMessage({ to: userId, messages: [{ type: 'text', text }] })
+  await pushText(userId, text)
 }

@@ -28,7 +28,7 @@ export async function parseReceipt(imageBase64, mimeType = 'image/jpeg') {
         { type: 'text', text: `請解析這張發票/收據，回傳以下 JSON 結構：
 {
   "date": "YYYY-MM-DD 格式，無法識別填 null",
-  "store": "店家名稱，無法識別填 null",
+  "store": "只填公司/店家主名稱。優先填有限公司、股份有限公司、公司、企業社、商行等正式名稱；若看不到正式名稱，再嘗試從招牌或 logo 判斷；若仍無法確定填 null",
   "invoice_number": "發票號碼，無法識別填 null",
   "total": 總金額數字（台幣，純數字），無法識別填 null,
   "items": [

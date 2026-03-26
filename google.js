@@ -300,18 +300,27 @@ function extractTotal(lines, text) {
 
 function extractStore(lines) {
   const noisePattern = /^(?:統一編號|發票|電話|地址|總計|合計|應付|日期|時間|TX|隨機碼|交易|明細|品名|數量|單價|金額)/i
+  const companyPattern = /(?:有限公司|股份有限公司|公司|企業社|商行|銀行|藥局|診所|醫院|門市|超商|超市|餐廳|咖啡|旅店|飯店)/
   const preferred = lines.find((line) =>
     !noisePattern.test(line) &&
-    /(?:公司|有限公司|股份有限公司|企業社|商行|餐廳|商店|門市|超商|藥局|診所|咖啡|早餐|便當|小吃)/.test(line)
+    companyPattern.test(line)
   )
-  if (preferred) return preferred
+  return normalizeCompanyName(preferred)
+}
 
-  const fallback = lines.find((line) =>
-    !noisePattern.test(line) &&
-    !/\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}/.test(line) &&
-    !/^\d[\d\s,.:/-]*$/.test(line) &&
-    line.length >= 2 &&
-    line.length <= 40
-  )
-  return fallback ?? null
+function normalizeCompanyName(value) {
+  if (!value) return null
+
+  const line = value.trim()
+  const companyMatch = line.match(/[\p{Script=Han}A-Za-z0-9（）()\-&\s]{2,}(?:股份有限公司|有限公司|公司|企業社|商行|銀行|藥局|診所|醫院)/u)
+  if (companyMatch) {
+    return companyMatch[0].trim()
+  }
+
+  const venueMatch = line.match(/[\p{Script=Han}A-Za-z0-9（）()\-&\s]{2,}(?:門市|超商|超市|餐廳|咖啡|旅店|飯店)/u)
+  if (venueMatch) {
+    return venueMatch[0].trim()
+  }
+
+  return null
 }

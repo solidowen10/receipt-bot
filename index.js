@@ -165,7 +165,7 @@ app.post('/api/setup/save', async (req, reply) => {
     '✅ 設定完成！\n\n' +
     `📁 Drive 資料夾：${driveFolderName ?? driveFolder}\n` +
     `📊 試算表：${sheetTitle || '發票記帳'}\n\n` +
-    '現在開始傳發票圖片給我，就會自動幫你記帳囉！'
+    '現在開始傳發票圖片給我，就會自動幫你記帳囉！\n一次請傳一張照片。'
   )
 
   reply.send({ ok: true })

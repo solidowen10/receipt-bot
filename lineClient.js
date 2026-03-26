@@ -1,11 +1,27 @@
 import * as line from '@line/bot-sdk'
 
-const config = {
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret:      process.env.LINE_CHANNEL_SECRET,
+const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN
+const channelSecret = process.env.LINE_CHANNEL_SECRET
+
+console.log('LINE env check:', {
+  hasAccessToken: !!channelAccessToken,
+  hasChannelSecret: !!channelSecret,
+})
+
+if (!channelAccessToken) {
+  throw new Error('Missing LINE_CHANNEL_ACCESS_TOKEN')
 }
 
-export const client     = new line.messagingApi.MessagingApiClient(config)
+if (!channelSecret) {
+  throw new Error('Missing LINE_CHANNEL_SECRET')
+}
+
+const config = {
+  channelAccessToken,
+  channelSecret,
+}
+
+export const client = new line.messagingApi.MessagingApiClient(config)
 export const blobClient = new line.messagingApi.MessagingApiBlobClient(config)
 export const middleware = line.middleware(config)
 
@@ -14,11 +30,17 @@ export function validateSignature(body, signature) {
 }
 
 export async function replyText(replyToken, text) {
-  return client.replyMessage({ replyToken, messages: [{ type: 'text', text }] })
+  return client.replyMessage({
+    replyToken,
+    messages: [{ type: 'text', text }],
+  })
 }
 
-export async function pushText(userId, text) {
-  return client.pushMessage({ to: userId, messages: [{ type: 'text', text }] })
+export async function pushText(to, text) {
+  return client.pushMessage({
+    to,
+    messages: [{ type: 'text', text }],
+  })
 }
 
 export async function askCategory(replyToken, parsedData, categories) {

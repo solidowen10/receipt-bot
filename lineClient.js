@@ -82,6 +82,24 @@ function sendCategoryPrompt(send, parsedData, categories) {
 }
 
 export async function replyConfirmation(replyToken, record, sheetUrl, reconfigureUrl) {
+  return sendConfirmationCard(
+    (messages) => client.replyMessage({ replyToken, messages }),
+    record,
+    sheetUrl,
+    reconfigureUrl
+  )
+}
+
+export async function pushConfirmationCard(to, record, sheetUrl, reconfigureUrl) {
+  return sendConfirmationCard(
+    (messages) => client.pushMessage({ to, messages }),
+    record,
+    sheetUrl,
+    reconfigureUrl
+  )
+}
+
+function sendConfirmationCard(send, record, sheetUrl, reconfigureUrl) {
   const bodyRows = [
     row('日期', record.date ?? '-'),
     row('店家', record.store ?? '-', true),
@@ -96,8 +114,8 @@ export async function replyConfirmation(replyToken, record, sheetUrl, reconfigur
     { type: 'separator', margin: 'md' },
     {
       type: 'box', layout: 'vertical', margin: 'md', spacing: 'sm', contents: [
-        { type: 'text', text: '繼續記帳：直接再上傳照片即可', size: 'sm', color: '#555555', wrap: true },
-        { type: 'text', text: '要換資料夾：請點下方「重新選擇資料夾」', size: 'sm', color: '#555555', wrap: true },
+        { type: 'text', text: '繼續記帳：請一次上傳一張照片', size: 'sm', color: '#555555', wrap: true },
+        { type: 'text', text: '要換資料夾：請點下方按鈕，並用瀏覽器開啟完成設定', size: 'sm', color: '#555555', wrap: true },
       ],
     },
   ]
@@ -109,9 +127,7 @@ export async function replyConfirmation(replyToken, record, sheetUrl, reconfigur
   footerBtns.push({ type: 'button', style: 'link', height: 'sm', action: { type: 'uri', label: '查看 Google Sheets', uri: sheetUrl } })
   footerBtns.push({ type: 'button', style: 'primary', height: 'sm', color: '#6517ab', action: { type: 'uri', label: '重新選擇資料夾', uri: reconfigureUrl } })
 
-  return client.replyMessage({
-    replyToken,
-    messages: [{
+  return send([{
       type: 'flex',
       altText: `✅ 記帳完成 ${record.store ?? ''} NT$${record.total ?? ''}`,
       contents: {
@@ -123,8 +139,7 @@ export async function replyConfirmation(replyToken, record, sheetUrl, reconfigur
         body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: bodyRows },
         footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: footerBtns },
       },
-    }],
-  })
+    }])
 }
 
 function row(label, value, wrap = false) {

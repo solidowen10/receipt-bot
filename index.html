@@ -120,6 +120,12 @@
   .breadcrumb .sep { color: var(--border); }
 
   .folder-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .scroll-list {
+    max-height: 320px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
   .folder-item {
     display: flex; align-items: center; gap: 10px;
     padding: 13px 14px;
@@ -216,6 +222,25 @@
     border-radius: 20px; padding: 4px 12px;
     font-size: 12px; font-weight: 500; margin-top: 10px;
   }
+  .destination-box {
+    background: #faf6ff;
+    border: 1px solid #dcc8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .destination-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .destination-value {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 600;
+    line-height: 1.5;
+  }
 
   /* Alert */
   .alert {
@@ -253,20 +278,22 @@
       <span onclick="navToRoot()">我的雲端硬碟</span>
     </div>
 
+    <div class="destination-box" id="folderSelected">
+      <span class="destination-label">目前儲存目的地</span>
+      <div class="selected-badge">✅ <span id="folderSelectedName">尚未選擇資料夾</span></div>
+      <div class="destination-value" id="folderSelectedPath">請進入資料夾後，將目前資料夾設為目的地。</div>
+    </div>
+
     <div class="folder-actions">
       <button class="btn btn-outline btn-sm" type="button" onclick="selectCurrentFolder()">
-        選擇目前資料夾
+        將目前資料夾設為目的地
       </button>
     </div>
 
     <div id="folderListWrap">
-      <div class="folder-list" id="folderList">
+      <div class="folder-list scroll-list" id="folderList">
         <div class="folder-item empty"><span>載入中 <span class="spinner"></span></span></div>
       </div>
-    </div>
-
-    <div id="folderSelected" style="display:none">
-      <div class="selected-badge">✅ <span id="folderSelectedName"></span></div>
     </div>
 
     <div style="margin-top:16px;display:flex;gap:8px">
@@ -283,19 +310,21 @@
     <div class="card-title">📊 選擇記錄試算表</div>
     <div class="card-sub">消費記錄將寫入此試算表</div>
 
+    <div class="destination-box" id="sheetSelected">
+      <span class="destination-label">目前記帳目的地</span>
+      <div class="selected-badge">✅ <span id="sheetSelectedName">尚未選擇試算表</span></div>
+      <div class="destination-value">請在下方選擇最近的試算表，或建立一個新的試算表。</div>
+    </div>
+
     <div class="new-sheet-row">
       <input type="text" id="newSheetName" placeholder="或建立新試算表：輸入名稱…" />
       <button class="btn btn-outline btn-sm" onclick="doCreateSheet()">建立</button>
     </div>
 
     <div id="sheetListWrap">
-      <div class="folder-list" id="sheetList">
+      <div class="folder-list scroll-list" id="sheetList">
         <div class="folder-item empty"><span>載入中 <span class="spinner"></span></span></div>
       </div>
-    </div>
-
-    <div id="sheetSelected" style="display:none">
-      <div class="selected-badge">✅ <span id="sheetSelectedName"></span></div>
     </div>
 
     <div style="margin-top:16px;display:flex;gap:8px">
@@ -402,7 +431,7 @@ async function loadFolders(parentId) {
   if (error) { list.innerHTML = `<div class="folder-item empty">❌ ${error}</div>`; return }
 
   if (folders.length === 0) {
-    list.innerHTML = '<div class="folder-item empty">（此資料夾沒有子資料夾）</div>'
+    list.innerHTML = '<div class="folder-item empty">已到這個資料夾的最底層。若這裡就是你要存放發票的位置，請點上方「將目前資料夾設為目的地」。</div>'
   } else {
     list.innerHTML = folders.map(f => `
       <div class="folder-item ${state.driveFolder === f.id ? 'selected' : ''}" data-id="${f.id}" data-name="${escHtml(f.name)}">
@@ -421,8 +450,8 @@ function selectFolder(id, name) {
   state.driveFolder = id; state.driveFolderName = name
   document.querySelectorAll('.folder-item').forEach(el =>
     el.classList.toggle('selected', el.dataset.id === id))
-  document.getElementById('folderSelected').style.display = 'block'
   document.getElementById('folderSelectedName').textContent = name
+  document.getElementById('folderSelectedPath').textContent = renderPathLabel(id, name)
   document.getElementById('p1Next').disabled = false
 }
 
@@ -458,6 +487,13 @@ function renderBreadcrumb() {
   ).join('')
 }
 
+function renderPathLabel(id, fallbackName) {
+  const path = state.folderStack.find((folder) => folder.id === id)
+    ? state.folderStack.slice(0, state.folderStack.findIndex((folder) => folder.id === id) + 1)
+    : [...state.folderStack, { id, name: fallbackName }]
+  return path.map((folder) => folder.name).join(' › ')
+}
+
 // ── Sheet browser ────────────────────────────────────────────────────────
 
 async function loadSheets() {
@@ -488,7 +524,6 @@ function selectSheet(id, name, tabName = '') {
   state.sheetId = id; state.sheetName = name; state.sheetTabName = tabName
   document.querySelectorAll('.sheet-item').forEach(el =>
     el.classList.toggle('selected', el.dataset.id === id))
-  document.getElementById('sheetSelected').style.display = 'block'
   document.getElementById('sheetSelectedName').textContent = name
   document.getElementById('p2Next').disabled = false
 }

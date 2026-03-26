@@ -1,4 +1,4 @@
-import { blobClient, replyText, replyConfirmation, pushCategory, pushText } from './lineClient.js'
+import { blobClient, replyText, replyConfirmation, pushCategory, pushConfirmationCard, pushText } from './lineClient.js'
 import { parseReceipt, CATEGORIES } from './claude.js'
 import { uploadToDrive, appendToSheet } from './google.js'
 import { getSession, setSession, clearSession } from './session.js'
@@ -110,7 +110,7 @@ async function handleText(userId, replyToken, text) {
 
   await replyText(replyToken,
     isSetupDone(userId)
-      ? '📸 直接傳發票照片給我，我就會幫你記帳！\n\n傳送 /setup 可以修改 Google Drive / Sheets 設定。'
+      ? '📸 直接傳發票照片給我，我就會幫你記帳！\n一次請傳一張照片。\n\n傳送 /setup 可以修改 Google Drive / Sheets 設定。'
       : setupMsg(userId)
   )
 }
@@ -142,22 +142,6 @@ async function saveAndNotify(userId, replyToken, data) {
   if (replyToken) {
     await replyConfirmation(replyToken, record, sheetUrl, reconfigureUrl)
   } else {
-    await pushConfirmation(userId, record, sheetUrl, reconfigureUrl)
+    await pushConfirmationCard(userId, record, sheetUrl, reconfigureUrl)
   }
-}
-
-async function pushConfirmation(userId, record, sheetUrl, reconfigureUrl) {
-  const text = [
-    '✅ 記帳完成！',
-    `📅 ${record.date ?? '-'}　🏪 ${record.store ?? '-'}`,
-    `💰 NT$ ${record.total ?? '-'}　🏷️ ${record.category ?? '-'}`,
-    '',
-    `📊 查看記錄：${sheetUrl}`,
-    record.pdfUrl ? `📄 發票 PDF：${record.pdfUrl}` : '',
-    '',
-    '繼續記帳：直接再上傳照片即可',
-    `要換資料夾：請點我重新選擇資料夾\n${reconfigureUrl}`,
-  ].filter(Boolean).join('\n')
-
-  await pushText(userId, text)
 }

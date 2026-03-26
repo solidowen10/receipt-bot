@@ -6,8 +6,8 @@
 <title>發票記帳 — Google 設定</title>
 <style>
   :root {
-    --green: #06C755;
-    --green-dark: #05a847;
+    --green: #6517ab;
+    --green-dark: #4c1083;
     --bg: #f0f2f5;
     --card: #ffffff;
     --border: #e0e0e0;
@@ -28,12 +28,25 @@
   /* Header */
   .header {
     background: var(--green);
-    padding: 20px 20px 16px;
+    padding: 28px 20px 20px;
     color: #fff;
     text-align: center;
   }
+  .header-logo {
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 14px;
+  }
   .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
   .header p  { font-size: 13px; opacity: 0.85; }
+  .header-credit {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.85;
+    letter-spacing: 0.04em;
+  }
 
   /* Step indicator */
   .steps {
@@ -117,7 +130,7 @@
   }
   .folder-item:last-child { border-bottom: none; }
   .folder-item:hover { background: #f8f8f8; }
-  .folder-item.selected { background: #e8f9ef; }
+  .folder-item.selected { background: #f1e7fb; }
   .folder-item .icon { font-size: 18px; flex-shrink: 0; }
   .folder-item .name { flex: 1; }
   .folder-item .nav { color: var(--muted); font-size: 18px; }
@@ -134,7 +147,7 @@
   }
   .sheet-item:last-child { border-bottom: none; }
   .sheet-item:hover { background: #f8f8f8; }
-  .sheet-item.selected { background: #e8f9ef; }
+  .sheet-item.selected { background: #f1e7fb; }
   .sheet-item .icon { font-size: 18px; flex-shrink: 0; }
 
   /* New sheet input */
@@ -163,7 +176,7 @@
     background: transparent; color: var(--green);
     border: 1.5px solid var(--green);
   }
-  .btn-outline:hover { background: #e8f9ef; }
+  .btn-outline:hover { background: #f1e7fb; }
   .btn-sm { padding: 8px 14px; font-size: 13px; }
   .btn-full { width: 100%; }
 
@@ -171,7 +184,7 @@
   .spinner {
     display: inline-block;
     width: 18px; height: 18px;
-    border: 2px solid rgba(6,199,85,0.3);
+    border: 2px solid rgba(101,23,171,0.25);
     border-top-color: var(--green);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
@@ -193,8 +206,8 @@
   /* Selected badge */
   .selected-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    background: #e8f9ef; color: #05a847;
-    border: 1px solid #a8dfbc;
+    background: #f1e7fb; color: var(--green);
+    border: 1px solid #d0b4eb;
     border-radius: 20px; padding: 4px 12px;
     font-size: 12px; font-weight: 500; margin-top: 10px;
   }
@@ -212,8 +225,10 @@
 <body>
 
 <div class="header">
-  <h1>📊 Google Drive 設定</h1>
+  <img class="header-logo" src="/receipt-chan-logo.png" alt="Receipt-chan Logo">
+  <h1>Receipt-chan Google 設定</h1>
   <p>選擇要儲存發票的資料夾與試算表</p>
+  <div class="header-credit">developed by owenree</div>
 </div>
 
 <!-- Step indicator -->
@@ -298,10 +313,6 @@
         <span class="summary-label">試算表</span>
         <span class="summary-value" id="s_sheet">—</span>
       </div>
-      <div class="summary-row">
-        <span class="summary-label">分頁名稱</span>
-        <span class="summary-value">發票記錄</span>
-      </div>
     </div>
 
     <div style="margin-top:20px;display:flex;gap:8px">
@@ -324,7 +335,7 @@
     </p>
     <div class="alert alert-success" style="margin-top:20px;text-align:left">
       ✅ 發票圖片和 PDF 將存至你選擇的 Drive 資料夾<br>
-      ✅ 消費記錄將自動寫入試算表（含 PDF 連結）
+      ✅ 消費記錄將自動寫入試算表（只保留 PDF 連結）
     </div>
   </div>
 </div>
@@ -475,7 +486,7 @@ async function doCreateSheet() {
   const res = await fetch('/api/sheets/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, title }),
+    body: JSON.stringify({ userId, title, driveFolder: state.driveFolder }),
   })
   const { sheet, error } = await res.json()
   btn.disabled = false; btn.textContent = '建立'
@@ -501,7 +512,7 @@ async function saveSettings() {
       driveFolder:     state.driveFolder,
       driveFolderName: state.driveFolderName,
       sheetId:         state.sheetId,
-      sheetName:       state.sheetName ?? '發票記錄',
+      sheetName:       '',
     }),
   })
   const { ok, error } = await res.json()

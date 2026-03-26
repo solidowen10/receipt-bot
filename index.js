@@ -136,10 +136,10 @@ app.get('/api/sheets', async (req, reply) => {
 
 /** Create a new Sheet for the user */
 app.post('/api/sheets/create', async (req, reply) => {
-  const { userId, title } = req.body ?? {}
+  const { userId, title, driveFolder } = req.body ?? {}
   if (!userId) return reply.status(400).send({ error: 'Missing userId' })
   try {
-    const sheet = await createSheet(userId, title || '發票記帳')
+    const sheet = await createSheet(userId, title || '發票記帳', driveFolder || null)
     reply.send({ sheet })
   } catch (e) {
     reply.status(500).send({ error: e.message })
@@ -156,7 +156,7 @@ app.post('/api/setup/save', async (req, reply) => {
     driveFolder,
     driveFolderName: driveFolderName ?? '',
     sheetId,
-    sheetName: sheetName ?? '發票記錄',
+    sheetName: sheetName ?? '',
     setupDone: 1,
   })
 
@@ -182,7 +182,7 @@ app.get('/api/setup/config', async (req, reply) => {
     driveFolder:     user.driveFolder,
     driveFolderName: user.driveFolderName,
     sheetId:         user.sheetId,
-    sheetName:       user.sheetName,
+    sheetName:       user.sheetName ?? '',
   })
 })
 

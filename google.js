@@ -106,17 +106,34 @@ export async function listSheets(userId) {
 }
 
 /** Create a new Sheets file for the user */
-export async function createSheet(userId, title = '發票記帳') {
+export async function createSheet(userId, title = '發票記帳', parentFolder = null) {
   const auth = await getAuthForUser(userId)
   const sheets = google.sheets({ version: 'v4', auth })
+  const drive = google.drive({ version: 'v3', auth })
 
   const res = await sheets.spreadsheets.create({
     requestBody: {
       properties: { title },
-      sheets: [{ properties: { title: '發票記錄' } }],
     },
   })
-  return { id: res.data.spreadsheetId, name: title }
+
+  const spreadsheetId = res.data.spreadsheetId
+  if (spreadsheetId && parentFolder && parentFolder !== 'root') {
+    const file = await drive.files.get({ fileId: spreadsheetId, fields: 'parents' })
+    const previousParents = (file.data.parents ?? []).join(',')
+    await drive.files.update({
+      fileId: spreadsheetId,
+      addParents: parentFolder,
+      removeParents: previousParents || undefined,
+      fields: 'id, parents',
+    })
+  }
+
+  return {
+    id: spreadsheetId,
+    name: title,
+    tabName: res.data.sheets?.[0]?.properties?.title ?? '',
+  }
 }
 
 // ── Drive upload ───────────────────────────────────────────────────────────
@@ -182,7 +199,7 @@ export async function uploadToDrive(userId, imageBuffer, mimeType, filename) {
 
 // ── Sheets append ──────────────────────────────────────────────────────────
 
-const HEADERS = ['時間戳記','消費日期','店家','品項','金額(NT$)','類別','發票號碼','備註','圖片連結','PDF連結']
+const HEADERS = ['時間戳記','消費日期','店家','品項','金額(NT$)','類別','發票號碼','備註','PDF連結']
 
 export async function appendToSheet(userId, record) {
   const user = getUser(userId)
@@ -191,19 +208,25 @@ export async function appendToSheet(userId, record) {
   const auth = await getAuthForUser(userId)
   const sheets = google.sheets({ version: 'v4', auth })
   const spreadsheetId = user.sheetId
-  const sheetName = user.sheetName || '發票記錄'
+  const sheetName = user.sheetName || ''
 
   // Ensure tab + header row exist
   const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties.title' })
-  const tabExists = meta.data.sheets.some((s) => s.properties.title === sheetName)
+  const titles = (meta.data.sheets ?? []).map((s) => s.properties.title)
+  const resolvedSheetName =
+    titles.includes(sheetName) ? sheetName :
+    titles[0] ?? sheetName
 
-  if (!tabExists) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      requestBody: { requests: [{ addSheet: { properties: { title: sheetName } } }] },
-    })
+  const headerRange = `${resolvedSheetName}!A1:I1`
+  const existingHeaderRow = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: headerRange,
+  }).catch(() => ({ data: {} }))
+
+  if (!(existingHeaderRow.data.values?.[0]?.length > 0)) {
     await sheets.spreadsheets.values.update({
-      spreadsheetId, range: `${sheetName}!A1`,
+      spreadsheetId,
+      range: `${resolvedSheetName}!A1`,
       valueInputOption: 'RAW',
       requestBody: { values: [HEADERS] },
     })
@@ -218,13 +241,12 @@ export async function appendToSheet(userId, record) {
     record.total ?? '',
     record.category ?? '',
     record.invoiceNumber ?? '',
-    record.notes ?? '',
-    record.imageUrl ?? '',
+    '',
     record.pdfUrl ?? '',
   ]
 
   await sheets.spreadsheets.values.append({
-    spreadsheetId, range: `${sheetName}!A1`,
+    spreadsheetId, range: `${resolvedSheetName}!A1`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] },
   })

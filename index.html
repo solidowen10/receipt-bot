@@ -135,6 +135,11 @@
   .folder-item .name { flex: 1; }
   .folder-item .nav { color: var(--muted); font-size: 18px; }
   .folder-item.empty { color: var(--muted); cursor: default; font-style: italic; font-size: 13px; }
+  .folder-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
 
   /* Sheet list */
   .sheet-item {
@@ -246,6 +251,12 @@
 
     <div class="breadcrumb" id="breadcrumb">
       <span onclick="navToRoot()">我的雲端硬碟</span>
+    </div>
+
+    <div class="folder-actions">
+      <button class="btn btn-outline btn-sm" type="button" onclick="selectCurrentFolder()">
+        選擇目前資料夾
+      </button>
     </div>
 
     <div id="folderListWrap">
@@ -413,6 +424,12 @@ function selectFolder(id, name) {
   document.getElementById('folderSelected').style.display = 'block'
   document.getElementById('folderSelectedName').textContent = name
   document.getElementById('p1Next').disabled = false
+}
+
+function selectCurrentFolder() {
+  const current = state.folderStack[state.folderStack.length - 1]
+  if (!current) return
+  selectFolder(current.id, current.name)
 }
 
 async function drillDown(folderId, folderName) {

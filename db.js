@@ -61,7 +61,7 @@ export function upsertUser(userId, fields) {
   const existing = getUser(userId)
   if (!existing) {
     const cols = ['userId', 'createdAt', 'updatedAt', ...Object.keys(fields)]
-    const vals = ['userId', 'createdAt', 'updatedAt', ...Object.keys(fields).map((k) => '@' + k)]
+    const vals = ['@userId', '@createdAt', '@updatedAt', ...Object.keys(fields).map((k) => '@' + k)]
     db.prepare(`INSERT INTO users (${cols.join(',')}) VALUES (${vals.join(',')})`).run({
       userId, createdAt: now, updatedAt: now, ...fields,
     })

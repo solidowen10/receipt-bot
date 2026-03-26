@@ -1,4 +1,4 @@
-import { blobClient, replyText, askCategory, replyConfirmation, pushText } from './lineClient.js'
+import { blobClient, replyText, replyConfirmation, pushCategory, pushText } from './lineClient.js'
 import { parseReceipt, CATEGORIES } from './claude.js'
 import { uploadToDrive, appendToSheet } from './google.js'
 import { getSession, setSession, clearSession } from './session.js'
@@ -34,10 +34,14 @@ export async function handleMessage(event) {
     }
   } catch (err) {
     console.error('Handler error:', err)
+    const notify = event.message.type === 'image'
+      ? (text) => pushText(userId, text)
+      : (text) => replyText(replyToken, text)
+
     if (err.message === 'USER_NOT_AUTHORIZED') {
-      await replyText(replyToken, setupMsg(userId, '⚠️ Google 授權已失效，請重新設定'))
+      await notify(setupMsg(userId, '⚠️ Google 授權已失效，請重新設定'))
     } else {
-      await replyText(replyToken, '❌ 處理時發生錯誤：' + err.message)
+      await notify('❌ 處理時發生錯誤：' + err.message)
     }
     clearSession(userId)
   }
@@ -74,7 +78,7 @@ async function handleImage(userId, replyToken, messageId) {
     imageBuffer: Array.from(imageBuffer),
     mimeType,
   })
-  await askCategory(replyToken, parsed, CATEGORIES)
+  await pushCategory(userId, parsed, CATEGORIES)
 }
 
 // ── Text ─────────────────────────────────────────────────────────────────────

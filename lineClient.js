@@ -45,6 +45,22 @@ export async function pushText(to, text) {
 }
 
 export async function askCategory(replyToken, parsedData, categories) {
+  return sendCategoryPrompt(
+    (messages) => client.replyMessage({ replyToken, messages }),
+    parsedData,
+    categories
+  )
+}
+
+export async function pushCategory(to, parsedData, categories) {
+  return sendCategoryPrompt(
+    (messages) => client.pushMessage({ to, messages }),
+    parsedData,
+    categories
+  )
+}
+
+function sendCategoryPrompt(send, parsedData, categories) {
   const preview = [
     `📅 日期：${parsedData.date ?? '無法識別'}`,
     `🏪 店家：${parsedData.store ?? '無法識別'}`,
@@ -53,9 +69,7 @@ export async function askCategory(replyToken, parsedData, categories) {
     '請問這筆消費要歸入哪個類別？',
   ].join('\n')
 
-  return client.replyMessage({
-    replyToken,
-    messages: [{
+  return send([{
       type: 'text',
       text: preview,
       quickReply: {
@@ -64,8 +78,7 @@ export async function askCategory(replyToken, parsedData, categories) {
           action: { type: 'message', label: cat.label, text: `__cat__${cat.value}` },
         })),
       },
-    }],
-  })
+    }])
 }
 
 export async function replyConfirmation(replyToken, record, sheetUrl) {

@@ -6,6 +6,18 @@ import { isSetupDone } from './db.js'
 
 const APP_URL = process.env.APP_URL
 
+// Build the setup message with a clear instruction to open in external browser.
+// Google blocks OAuth inside LINE's built-in WebView (disallowed_useragent).
+function setupMsg(userId, prefix = '👋 請先完成設定後再開始使用') {
+  const url = `${APP_URL}/auth?userId=${encodeURIComponent(userId)}`
+  return (
+    `${prefix}\n\n` +
+    `🔗 ${url}\n\n` +
+    `⚠️ 請長按連結 → 選擇「用瀏覽器開啟」\n` +
+    `（必須用 Safari / Chrome 開啟，LINE 內建瀏覽器無法完成 Google 授權）`
+  )
+}
+
 export async function handleMessage(event) {
   if (event.type !== 'message') return
   const userId = event.source.userId
@@ -22,12 +34,8 @@ export async function handleMessage(event) {
     }
   } catch (err) {
     console.error('Handler error:', err)
-    // Surface a friendly error for unlinked Google account
     if (err.message === 'USER_NOT_AUTHORIZED') {
-      await replyText(replyToken,
-        '⚠️ 你的 Google 帳號授權已失效，請重新設定：\n\n' +
-        `🔗 ${APP_URL}/auth?userId=${encodeURIComponent(userId)}`
-      )
+      await replyText(replyToken, setupMsg(userId, '⚠️ Google 授權已失效，請重新設定'))
     } else {
       await replyText(replyToken, '❌ 處理時發生錯誤：' + err.message)
     }
@@ -38,19 +46,13 @@ export async function handleMessage(event) {
 // ── Image ────────────────────────────────────────────────────────────────────
 
 async function handleImage(userId, replyToken, messageId) {
-  // Guard: must complete setup first
   if (!isSetupDone(userId)) {
-    await replyText(replyToken,
-      '👋 歡迎！在開始記帳之前，請先完成 Google Drive / Sheets 設定：\n\n' +
-      `🔗 ${APP_URL}/auth?userId=${encodeURIComponent(userId)}\n\n` +
-      '設定完成後就可以直接傳發票圖片給我了！'
-    )
+    await replyText(replyToken, setupMsg(userId))
     return
   }
 
   await replyText(replyToken, '📷 收到發票！解析中，請稍候...')
 
-  // Download image
   const imageStream = await blobClient.getMessageContent(messageId)
   const chunks = []
   for await (const chunk of imageStream) chunks.push(chunk)
@@ -58,7 +60,6 @@ async function handleImage(userId, replyToken, messageId) {
   const imageBase64 = imageBuffer.toString('base64')
   const mimeType = 'image/jpeg'
 
-  // Parse with Claude Vision
   const parsed = await parseReceipt(imageBase64, mimeType)
 
   if (parsed.autoClassified) {
@@ -66,7 +67,6 @@ async function handleImage(userId, replyToken, messageId) {
     return
   }
 
-  // Ask user for category
   setSession(userId, {
     state: 'awaiting_category',
     parsedData: parsed,
@@ -80,18 +80,13 @@ async function handleImage(userId, replyToken, messageId) {
 // ── Text ─────────────────────────────────────────────────────────────────────
 
 async function handleText(userId, replyToken, text) {
-  // /setup — send auth link
   if (text.trim() === '/setup') {
-    const url = `${APP_URL}/auth?userId=${encodeURIComponent(userId)}`
     await replyText(replyToken,
-      isSetupDone(userId)
-        ? `⚙️ 重新設定 Google Drive / Sheets：\n\n🔗 ${url}`
-        : `👋 請先完成設定：\n\n🔗 ${url}`
+      setupMsg(userId, isSetupDone(userId) ? '⚙️ 重新設定 Google Drive / Sheets' : '👋 請先完成設定')
     )
     return
   }
 
-  // Category Quick Reply response
   if (text.startsWith('__cat__')) {
     const category = text.replace('__cat__', '')
     const session = getSession(userId)
@@ -109,11 +104,10 @@ async function handleText(userId, replyToken, text) {
     return
   }
 
-  // Default help
   await replyText(replyToken,
     isSetupDone(userId)
       ? '📸 直接傳發票照片給我，我就會幫你記帳！\n\n傳送 /setup 可以修改 Google Drive / Sheets 設定。'
-      : `👋 請先完成設定後再開始使用：\n\n🔗 ${APP_URL}/auth?userId=${encodeURIComponent(userId)}`
+      : setupMsg(userId)
   )
 }
 
@@ -126,11 +120,9 @@ async function saveAndNotify(userId, replyToken, data) {
   const safeDate  = date ?? new Date().toISOString().split('T')[0]
   const filename  = `${safeDate}_${safeStore}.jpg`
 
-  // Upload to user's Drive
   const { imageUrl, pdfUrl } = await uploadToDrive(userId, imageBuffer, mimeType, filename)
   const record = { ...rest, date, store, imageUrl, pdfUrl }
 
-  // Append to user's Sheets
   const sheetUrl = await appendToSheet(userId, record)
 
   clearSession(userId)

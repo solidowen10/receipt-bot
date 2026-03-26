@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 
 import { validateSignature, pushText } from './lineClient.js'
 import { handleMessage } from './handlers.js'
-import { buildAuthUrl, exchangeCodeForTokens, listDriveFolders, listSheets, createSheet } from './google.js'
+import { buildAuthUrl, exchangeCodeForTokens, listDriveFolders, listSheets, createSheet, getOAuthConfigSummary } from './google.js'
 import { createOAuthState, consumeOAuthState, upsertUser, getUser } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -73,7 +73,28 @@ app.get('/oauth/callback', async (req, reply) => {
     return reply.type('text/html').send(errorPage('連結已失效', '請回到 LINE 重新發送 /setup 取得新連結。'))
   }
 
-  await exchangeCodeForTokens(userId, code)
+  if (!code) {
+    return reply.type('text/html').send(errorPage('缺少授權碼', 'Google 沒有回傳授權碼，請回到 LINE 重新嘗試。'))
+  }
+
+  try {
+    await exchangeCodeForTokens(userId, code)
+  } catch (err) {
+    req.log.error({
+      msg: 'Google OAuth token exchange failed',
+      oauth: getOAuthConfigSummary(),
+      error: err?.message,
+      response: err?.response?.data,
+      codeLength: typeof code === 'string' ? code.length : null,
+    })
+
+    return reply.type('text/html').send(
+      errorPage(
+        'Google 授權失敗',
+        '無法完成 Google token 交換。請確認 Google OAuth 的 Redirect URI 與 APP_URL 完全一致，然後重新從 LINE 的 /setup 開始。'
+      )
+    )
+  }
 
   // Redirect to the setup UI (pass userId via query for the SPA to use)
   reply.redirect(`/setup/?userId=${encodeURIComponent(userId)}`)

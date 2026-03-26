@@ -3,12 +3,22 @@ import { upsertUser, getUser } from './db.js'
 
 const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const REDIRECT_URI  = `${process.env.APP_URL}/oauth/callback`
+const APP_URL       = (process.env.APP_URL || '').replace(/\/+$/, '')
+const REDIRECT_URI  = `${APP_URL}/oauth/callback`
 
 // ── OAuth client factory ───────────────────────────────────────────────────
 
 export function createOAuthClient() {
   return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+}
+
+export function getOAuthConfigSummary() {
+  return {
+    appUrl: APP_URL,
+    redirectUri: REDIRECT_URI,
+    hasClientId: !!CLIENT_ID,
+    hasClientSecret: !!CLIENT_SECRET,
+  }
 }
 
 /** Build the Google authorization URL for a given state token */

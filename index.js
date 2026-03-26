@@ -29,6 +29,14 @@ app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, rawBod
 // Serve setup UI
 app.register(staticPlugin, { root: __dirname })
 
+app.get('/', async (req, reply) => {
+  return reply.send({ ok: true, service: 'line-receipt-bot' })
+})
+
+app.get('/health', async (req, reply) => {
+  return reply.send({ ok: true })
+})
+
 app.get('/setup/', async (req, reply) => {
   return reply.type('text/html').sendFile('index.html')
 })

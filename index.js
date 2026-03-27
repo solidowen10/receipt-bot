@@ -41,6 +41,10 @@ app.get('/setup/', async (req, reply) => {
   return reply.type('text/html').sendFile('index.html')
 })
 
+app.get('/intro', async (req, reply) => {
+  return reply.type('text/html').sendFile('line-bot-intro.html')
+})
+
 // ── LINE Webhook ────────────────────────────────────────────────────────────
 
 app.post('/webhook', async (req, reply) => {

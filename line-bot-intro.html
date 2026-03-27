@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>發票記帳機器人</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #6517ab;
+    --brand-mid: #7a2ec3;
+    --brand-dark: #4f1188;
+    --brand-pale: #f2eafd;
+    --ink: #111;
+    --ink2: #444;
+    --ink3: #888;
+    --rule: #e8e8e8;
+    --bg: #f7f8f6;
+    --white: #fff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(180deg, var(--brand-mid) 0%, var(--brand) 100%);
+    padding: 64px 24px 56px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 280px; height: 280px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -40px;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+
+  .hero-icon {
+    width: min(220px, 58vw);
+    display: block;
+    margin: 0 auto 24px;
+    position: relative; z-index: 1;
+  }
+
+  .hero-credit {
+    margin-top: 12px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.78);
+    letter-spacing: 0.04em;
+    position: relative; z-index: 1;
+  }
+
+  .hero h1 {
+    font-size: clamp(26px, 6vw, 36px);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    position: relative; z-index: 1;
+  }
+
+  .hero p {
+    font-size: 16px;
+    color: rgba(255,255,255,0.88);
+    line-height: 1.6;
+    max-width: 340px;
+    margin: 0 auto 28px;
+    position: relative; z-index: 1;
+  }
+
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    color: #fff;
+    font-size: 13px;
+    padding: 5px 14px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Pitch ── */
+  .pitch {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 20px 0;
+  }
+
+  .pitch-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--brand-mid);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .pitch h2 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+
+  .pitch p {
+    font-size: 15px;
+    color: var(--ink2);
+    line-height: 1.7;
+  }
+
+  /* ── Flow steps ── */
+  .flow {
+    max-width: 480px;
+    margin: 40px auto 0;
+    padding: 0 20px;
+  }
+
+  .flow-item {
+    display: flex;
+    gap: 16px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--rule);
+    align-items: flex-start;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .flow-item:last-child { border-bottom: none; }
+  .flow-item.visible { opacity: 1; transform: translateY(0); }
+
+  .flow-num {
+    width: 36px; height: 36px;
+    background: var(--brand);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .flow-body h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .flow-body p {
+    font-size: 14px;
+    color: var(--ink2);
+    line-height: 1.6;
+  }
+
+  .flow-body .tag {
+    display: inline-block;
+    background: var(--brand-pale);
+    color: var(--brand-dark);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    padding: 1px 7px;
+    margin-top: 6px;
+  }
+
+  /* ── Features grid ── */
+  .features {
+    max-width: 480px;
+    margin: 40px auto 0;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .feat-card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 18px 16px;
+  }
+
+  .feat-icon {
+    font-size: 24px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .feat-card h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--ink);
+  }
+
+  .feat-card p {
+    font-size: 12px;
+    color: var(--ink3);
+    line-height: 1.55;
+  }
+
+  /* ── Warning box ── */
+  .warn-box {
+    max-width: 480px;
+    margin: 32px auto 0;
+    padding: 0 20px;
+  }
+
+  .warn-inner {
+    background: #fffbeb;
+    border: 1px solid #f0d060;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .warn-inner .icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+
+  .warn-inner p {
+    font-size: 13px;
+    color: #7a5c00;
+    line-height: 1.6;
+  }
+
+  .warn-inner strong { color: #5a4000; }
+
+  /* ── CTA ── */
+  .cta {
+    max-width: 480px;
+    margin: 36px auto 0;
+    padding: 0 20px 60px;
+    text-align: center;
+  }
+
+  .cta p {
+    font-size: 14px;
+    color: var(--ink3);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--brand);
+    color: #fff;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 16px 32px;
+    border-radius: 14px;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.12s;
+    box-shadow: 0 10px 28px rgba(101,23,171,0.28);
+  }
+
+  .cta-btn:active {
+    transform: scale(0.97);
+    background: var(--brand-mid);
+  }
+
+  .cta-sub {
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--ink3);
+  }
+
+  /* ── Section divider ── */
+  .divider {
+    max-width: 480px;
+    margin: 40px auto 0;
+    padding: 0 20px;
+  }
+  .divider-line {
+    border: none;
+    border-top: 1px solid var(--rule);
+  }
+  .divider-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--ink3);
+    text-transform: uppercase;
+    margin-top: 24px;
+    margin-bottom: 0;
+  }
+
+  /* ── Chat mockup ── */
+  .mockup {
+    max-width: 480px;
+    margin: 20px auto 0;
+    padding: 0 20px;
+  }
+
+  .chat-wrap {
+    background: #e5ddd5;
+    border-radius: 14px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .bubble.user {
+    align-self: flex-end;
+    background: #dcf8c6;
+    color: #111;
+    border-bottom-right-radius: 4px;
+  }
+
+  .bubble.bot {
+    align-self: flex-start;
+    background: #fff;
+    color: #111;
+    border-bottom-left-radius: 4px;
+  }
+
+  .bubble.bot .bot-head {
+    font-size: 11px;
+    color: var(--brand-dark);
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .bubble strong { font-weight: 700; }
+  .bubble .muted { color: #888; font-size: 12px; }
+
+  .flex-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 72%;
+    align-self: flex-start;
+    font-size: 13px;
+  }
+
+  .flex-card-header {
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .flex-card-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .flex-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+  .flex-row .label { color: #888; }
+  .flex-row .val { font-weight: 500; }
+  .flex-row .val.green { color: var(--brand-dark); font-weight: 700; }
+
+  .flex-sep { border: none; border-top: 1px solid #eee; margin: 4px 0; }
+
+  .flex-card-footer {
+    padding: 8px 14px 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .flex-link {
+    font-size: 12px;
+    color: var(--brand-dark);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111;
+      --white: #1c1c1c;
+      --ink: #f0f0f0;
+      --ink2: #aaa;
+      --ink3: #666;
+      --rule: #2a2a2a;
+      --brand-pale: #251238;
+      --brand-dark: #c899ff;
+    }
+    .chat-wrap { background: #2a2a2a; }
+    .bubble.user { background: #1a4a2a; color: #e0ffe0; }
+    .bubble.bot { background: #252525; color: #eee; }
+    .flex-card { background: #252525; }
+    .warn-inner { background: #2a2200; border-color: #7a5c00; }
+    .warn-inner p { color: #d4a800; }
+    .warn-inner strong { color: #f0c000; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <img class="hero-icon" src="/receipt-chan-logo.png" alt="Receipt-chan logo">
+  <h1>Receipt-chan 發票醬</h1>
+  <p>拍一張照片，自動記錄消費，整理進你自己的 Google Drive 與試算表</p>
+  <div class="hero-tag">
+    <span>⚡</span> 由 AI 自動解析，免手動輸入
+  </div>
+  <p class="hero-credit">developed by owenree</p>
+</div>
+
+<!-- Pitch -->
+<div class="pitch">
+  <div class="pitch-label">這是什麼？</div>
+  <h2>把發票拍照傳給 Bot，<br>剩下的它全包了</h2>
+  <p>不需要下載 App，不需要學新工具。只要在 LINE 裡傳一張發票照片，機器人就會自動辨識日期、店家、金額，上傳到你指定的 Google Drive，並寫入你的試算表。</p>
+</div>
+
+<!-- How to use -->
+<div class="divider">
+  <hr class="divider-line">
+  <p class="divider-label">使用步驟</p>
+</div>
+
+<div class="flow">
+  <div class="flow-item">
+    <div class="flow-num">1</div>
+    <div class="flow-body">
+      <h3>加入機器人好友</h3>
+      <p>點下方連結加好友，或掃描 QR Code。</p>
+    </div>
+  </div>
+  <div class="flow-item">
+    <div class="flow-num">2</div>
+    <div class="flow-body">
+      <h3>完成 Google 授權設定</h3>
+      <p>機器人會傳一個設定連結給你。<strong>長按連結 → 用瀏覽器開啟</strong>，登入 Google 帳號，選擇要存放的 Drive 資料夾和試算表。只需要做一次。</p>
+      <span class="tag">Safari / Chrome 開啟，勿用 LINE 內建瀏覽器</span>
+    </div>
+  </div>
+  <div class="flow-item">
+    <div class="flow-num">3</div>
+    <div class="flow-body">
+      <h3>傳發票照片</h3>
+      <p>拍下任何發票或收據，直接傳給機器人。它會自動解析內容，幾秒內完成記帳。</p>
+    </div>
+  </div>
+  <div class="flow-item">
+    <div class="flow-num">4</div>
+    <div class="flow-body">
+      <h3>確認完成</h3>
+      <p>機器人回傳記帳摘要，附上 Google Sheets 和 PDF 連結。資料永遠在你自己的雲端，不經過第三方儲存。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Chat mockup -->
+<div class="divider">
+  <hr class="divider-line">
+  <p class="divider-label">實際對話長這樣</p>
+</div>
+
+<div class="mockup">
+  <div class="chat-wrap">
+    <div class="bubble user">📷 <em>（傳送發票照片）</em></div>
+    <div class="bubble bot">
+      <div class="bot-head">發票記帳 Bot</div>
+      📷 收到發票！解析中，請稍候...
+    </div>
+    <div class="flex-card">
+      <div class="flex-card-header">✅ 記帳完成</div>
+      <div class="flex-card-body">
+        <div class="flex-row"><span class="label">日期</span><span class="val">2025-03-27</span></div>
+        <div class="flex-row"><span class="label">店家</span><span class="val">全聯福利中心</span></div>
+        <div class="flex-row"><span class="label">類別</span><span class="val">超市</span></div>
+        <hr class="flex-sep">
+        <div class="flex-row"><span class="label" style="font-weight:700">總金額</span><span class="val green">NT$ 487</span></div>
+      </div>
+      <div class="flex-card-footer">
+        <a class="flex-link" href="#">查看發票 PDF</a>
+        <a class="flex-link" href="#">查看 Google Sheets</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<div class="divider">
+  <hr class="divider-line">
+  <p class="divider-label">功能特色</p>
+</div>
+
+<div class="features">
+  <div class="feat-card">
+    <span class="feat-icon">🤖</span>
+    <h4>AI 自動辨識</h4>
+    <p>日期、店家、金額、品項全自動解析，不確定才會詢問你</p>
+  </div>
+  <div class="feat-card">
+    <span class="feat-icon">📁</span>
+    <h4>存你自己的 Drive</h4>
+    <p>圖片和 PDF 存在你自己指定的 Google Drive 資料夾</p>
+  </div>
+  <div class="feat-card">
+    <span class="feat-icon">📊</span>
+    <h4>自動寫入試算表</h4>
+    <p>每筆記錄自動整理到指定表單，方便後續對帳和統計</p>
+  </div>
+  <div class="feat-card">
+    <span class="feat-icon">🔒</span>
+    <h4>資料獨立隔離</h4>
+    <p>每人的資料各自獨立，只有你能存取自己的試算表</p>
+  </div>
+</div>
+
+<!-- Warning -->
+<div class="warn-box">
+  <div class="warn-inner">
+    <span class="icon">⚠️</span>
+    <p><strong>設定時請注意：</strong>點設定連結後，必須長按 → 選「用瀏覽器開啟」（Safari 或 Chrome）。直接在 LINE 內點開會被 Google 擋住，這是 Google 的安全限制。</p>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta">
+  <p>掃描下方 QR Code 或點連結加入好友，<br>傳任何訊息給機器人就會開始引導你設定。</p>
+  <a href="https://line.me/R/ti/p/@your-bot-id" class="cta-btn">
+    <span style="font-size:20px">💬</span>
+    加入 LINE 機器人
+  </a>
+  <p class="cta-sub">請將上方連結替換為你的 Bot 實際連結</p>
+</div>
+
+<script>
+  const items = document.querySelectorAll('.flow-item')
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80)
+        io.unobserve(e.target)
+      }
+    })
+  }, { threshold: 0.15 })
+  items.forEach(el => io.observe(el))
+</script>
+
+</body>
+</html>
